@@ -1,0 +1,365 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+// [1] Caesar
+string caesarEncrypt(const string &text, int key)
+{
+    string res = "";
+    key = (key % 26 + 26) % 26;
+    for (int i = 0; i < (int)text.size(); i++)
+    {
+        char c = text[i];
+        if (isupper(c))
+            res += char((c - 'A' + key) % 26 + 'A');
+        else if (islower(c))
+            res += char((c - 'a' + key) % 26 + 'a');
+        else
+            res += c;
+    }
+    return res;
+}
+string caesarDecrypt(const string &text, int key)
+{
+    key = (key % 26 + 26) % 26;
+    return caesarEncrypt(text, (26 - key) % 26);
+}
+
+// [2] Monoalphabetic
+string mono_encrypt(string text, string key)
+{
+    string result = "";
+    for (int i = 0; i < (int)text.length(); i++)
+    {
+        char ch = text[i];
+        if (isalpha(ch))
+        {
+            int index = toupper(ch) - 'A';
+            char enc = key[index];
+            if (isupper(ch))
+                result += enc;
+            else
+                result += tolower(enc);
+        }
+        else
+        {
+            result += ch;
+        }
+    }
+    return result;
+}
+string mono_decrypt(string text, string key)
+{
+    // Build inverse mapping: inv[key[i]] = 'A'+i
+    vector<char> inv(26);
+    for (int i = 0; i < 26; i++)
+        inv[toupper(key[i]) - 'A'] = char('A' + i);
+
+    string result = "";
+    for (int i = 0; i < (int)text.length(); i++)
+    {
+        char ch = text[i];
+        if (isalpha(ch))
+        {
+            char mapped = inv[toupper(ch) - 'A'];
+            if (isupper(ch))
+                result += mapped;
+            else
+                result += tolower(mapped);
+        }
+        else
+        {
+            result += ch;
+        }
+    }
+    return result;
+}
+
+// [3] One-Time Pad
+string otpEncrypt(string text, string key)
+{
+    string encrypted = "";
+    for (int i = 0; i < (int)text.length(); i++)
+        encrypted += text[i] ^ key[i];
+    return encrypted;
+}
+string otpDecrypt(string cipher, string key)
+{
+    // XOR again with the same key
+    return otpEncrypt(cipher, key);
+}
+
+// [4] Rail Fence
+string encryptRailFence(const string &text, int key)
+{
+    if (key <= 1 || key >= (int)text.size())
+        return text;
+
+    vector<string> rail(key, "");
+    int row = 0, dir = 1;
+
+    for (int i = 0; i < (int)text.size(); i++)
+    {
+        rail[row] += text[i];
+        if (row == 0)
+            dir = 1;
+        else if (row == key - 1)
+            dir = -1;
+        row += dir;
+    }
+
+    string result = "";
+    for (int r = 0; r < key; r++)
+        result += rail[r];
+
+    return result;
+}
+string decryptRailFence(const string &cipher, int key)
+{
+    if (key <= 1 || key >= (int)cipher.size())
+        return cipher;
+
+    int n = (int)cipher.size();
+    vector<vector<bool>> mark(key, vector<bool>(n, false));
+
+    // Mark the zig-zag path
+    int row = 0, dir = 1;
+    for (int col = 0; col < n; col++)
+    {
+        mark[row][col] = true;
+        if (row == 0) dir = 1;
+        else if (row == key - 1) dir = -1;
+        row += dir;
+    }
+
+    // Fill the marked cells with ciphertext in row-wise order
+    vector<vector<char>> rail(key, vector<char>(n, '\0'));
+    int idx = 0;
+    for (int r = 0; r < key; r++)
+        for (int c = 0; c < n; c++)
+            if (mark[r][c])
+                rail[r][c] = cipher[idx++];
+
+    // Read along the zig-zag path to rebuild plaintext
+    string plain = "";
+    row = 0; dir = 1;
+    for (int col = 0; col < n; col++)
+    {
+        plain += rail[row][col];
+        if (row == 0) dir = 1;
+        else if (row == key - 1) dir = -1;
+        row += dir;
+    }
+    return plain;
+}
+
+// [5] Vigenere
+string vigenereEncrypt(const string &text, const string &key)
+{
+    string res = "";
+    int j = 0, n = (int)key.size();
+    for (int i = 0; i < (int)text.size(); i++)
+    {
+        char c = text[i];
+        if (isalpha(c) && n > 0)
+        {
+            int shift = tolower(key[j % n]) - 'a';
+            if (isupper(c))
+                res += char((c - 'A' + shift) % 26 + 'A');
+            else
+                res += char((c - 'a' + shift) % 26 + 'a');
+            j++;
+        }
+        else
+        {
+            res += c;
+        }
+    }
+    return res;
+}
+string vigenereDecrypt(const string &text, const string &key)
+{
+    string res = "";
+    int j = 0, n = (int)key.size();
+    for (int i = 0; i < (int)text.size(); i++)
+    {
+        char c = text[i];
+        if (isalpha(c) && n > 0)
+        {
+            int shift = tolower(key[j % n]) - 'a';
+            if (isupper(c))
+                res += char((c - 'A' - shift + 26) % 26 + 'A');
+            else
+                res += char((c - 'a' - shift + 26) % 26 + 'a');
+            j++;
+        }
+        else
+        {
+            res += c;
+        }
+    }
+    return res;
+}
+
+// [6] Vernam
+string vernamEncrypt(string text, string key)
+{
+    if (text.length() != key.length())
+    {
+        cout << "Error: Key must be the same length as text!" << endl;
+        return "";
+    }
+
+    string encrypted = "";
+    for (int i = 0; i < (int)text.length(); i++)
+        encrypted += text[i] ^ key[i];
+
+    return encrypted;
+}
+string vernamDecrypt(string cipher, string key)
+{
+    // XOR again with the same key
+    return vernamEncrypt(cipher, key);
+}
+
+int main()
+{
+    int choice;
+    cout << "Choose Cipher:\n";
+    cout << "1. Caesar\n";
+    cout << "2. Monoalphabetic\n";
+    cout << "3. One-Time Pad (OTP)\n";
+    cout << "4. Rail Fence\n";
+    cout << "5. Vigenere\n";
+    cout << "6. Vernam\n";
+    cout << "Enter choice: ";
+    if (!(cin >> choice))
+        return 0;
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+    switch (choice)
+    {
+    case 1:
+    {
+        string text;
+        int key;
+        cout << "Caesar Cipher\n";
+        cout << "Enter text: ";
+        getline(cin, text);
+        cout << "Enter shift key (integer): ";
+        cin >> key;
+
+        string enc = caesarEncrypt(text, key);
+        string dec = caesarDecrypt(enc, key);
+
+        cout << "Encrypted: " << enc << "\n";
+        cout << "Decrypted: " << dec << "\n";
+        break;
+    }
+    case 2:
+    {
+        string text, key;
+        cout << "Monoalphabetic Cipher\n";
+        cout << "Enter the plain text: ";
+        getline(cin, text);
+        cout << "Enter the 26-letter substitution key (A-Z): ";
+        getline(cin, key);
+
+        if (key.length() != 26)
+        {
+            cout << "Error: Key must contain exactly 26 letters!" << endl;
+            break;
+        }
+
+        string encrypted = mono_encrypt(text, key);
+        string decrypted = mono_decrypt(encrypted, key);
+
+        cout << "\nPlain Text: " << text << endl;
+        cout << "Encrypted Text: " << encrypted << endl;
+        cout << "Decrypted Text: " << decrypted << endl;
+        break;
+    }
+    case 3:
+    {
+        string text;
+        cout << "----- One-Time Pad (OTP) -----\n";
+        cout << "Enter plain text: ";
+        getline(cin, text);
+
+        srand((unsigned)time(0));
+        string key = "";
+        for (int i = 0; i < (int)text.length(); i++)
+            key += char(rand() % 256);
+
+        string encrypted = otpEncrypt(text, key);
+        string decrypted = otpDecrypt(encrypted, key);
+
+        cout << "\nGenerated Random Key (ASCII values): ";
+        for (char c : key)
+            cout << (int)(unsigned char)c << " ";
+
+        cout << "\nEncrypted Text (ASCII values): ";
+        for (char c : encrypted)
+            cout << (int)(unsigned char)c << " ";
+
+        cout << "\nDecrypted Text: " << decrypted << endl;
+        break;
+    }
+    case 4:
+    {
+        string text;
+        int key;
+        cout << "Rail Fence Cipher\n";
+        cout << "Enter the plain text: ";
+        getline(cin, text);
+        cout << "Enter the key (number of rails): ";
+        cin >> key;
+
+        string encrypted = encryptRailFence(text, key);
+        string decrypted = decryptRailFence(encrypted, key);
+
+        cout << "\nPlain Text: " << text << endl;
+        cout << "Encrypted Text: " << encrypted << endl;
+        cout << "Decrypted Text: " << decrypted << endl;
+        break;
+    }
+    case 5:
+    {
+        string text, key;
+        cout << "Vigenere Cipher\n";
+        cout << "Enter text: ";
+        getline(cin, text);
+        cout << "Enter keyword (letters only): ";
+        getline(cin, key);
+
+        string enc = vigenereEncrypt(text, key);
+        string dec = vigenereDecrypt(enc, key);
+
+        cout << "Encrypted: " << enc << "\n";
+        cout << "Decrypted: " << dec << "\n";
+        break;
+    }
+    case 6:
+    {
+        string text, key;
+        cout << "----- Vernam Cipher -----\n";
+        cout << "Enter plain text: ";
+        getline(cin, text);
+        cout << "Enter key (same length as text): ";
+        getline(cin, key);
+
+        string encrypted = vernamEncrypt(text, key);
+        string decrypted = vernamDecrypt(encrypted, key);
+
+        cout << "\nEncrypted Text (ASCII values): ";
+        for (char c : encrypted)
+            cout << int((unsigned char)c) << " ";
+
+        cout << "\nDecrypted Text: " << decrypted << endl;
+        break;
+    }
+    default:
+        break;
+    }
+
+    return 0;
+}
