@@ -1,25 +1,46 @@
 import hashlib
 
-# Get message from user
-message = input("Enter message to send: ")
+def compute_sha1(message: str) -> str:
+    """Compute and return the SHA-1 hash of a given message."""
+    return hashlib.sha1(message.encode('utf-8')).hexdigest()
 
-# Sender calculates SHA-1 hash
-sender_hash = hashlib.sha1(message.encode()).hexdigest()
-print("\n[SENDER]")
-print("Message:", message)
-print("SHA-1 Hash:", sender_hash)
+def main():
+    print("SHA-1 Message Integrity Demonstration")
 
-# Simulate sending message over the network
-received_message = message
+    # Step 1: Sender inputs message
+    message = input("\nEnter message to send: ")
 
-# Receiver calculates SHA-1 hash
-receiver_hash = hashlib.sha1(received_message.encode()).hexdigest()
-print("\n[RECEIVER]")
-print("Received Message:", received_message)
-print("Computed Hash:", receiver_hash)
+    # Step 2: Sender computes hash
+    sender_hash = compute_sha1(message)
+    print("\n[SENDER SIDE]")
+    print("Original Message :", message)
+    print("Computed SHA-1 Hash :", sender_hash)
 
-# Compare both hashes
-if sender_hash == receiver_hash:
-    print("\n Message integrity verified — message not changed.")
-else:
-    print("\n Message integrity failed — message was modified.")
+    # Step 3: Simulate sending message over the network
+    received_message = message  # unchanged for demonstration
+
+    # Step 4: Receiver computes hash
+    receiver_hash = compute_sha1(received_message)
+    print("\n[RECEIVER SIDE]")
+    print("Received Message  :", received_message)
+    print("Computed SHA-1 Hash :", receiver_hash)
+
+    # Step 5: Compare both hashes
+    print("\n[VERIFICATION RESULT]")
+    if sender_hash == receiver_hash:
+        print("Message integrity verified — message not altered during transmission.")
+    else:
+        print("Message integrity failed — message was modified in transit.")
+
+    # Optional: Demonstrate tampering effect
+    print("\nDemonstration of message tampering:")
+    tampered_message = received_message + "!"
+    tampered_hash = compute_sha1(tampered_message)
+    print("Tampered Message  :", tampered_message)
+    print("Tampered SHA-1 Hash :", tampered_hash)
+
+    if sender_hash != tampered_hash:
+        print("Hash mismatch detected — message integrity compromised.")
+
+if __name__ == "__main__":
+    main()
