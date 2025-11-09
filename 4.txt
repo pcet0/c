@@ -74,3 +74,88 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+//without function
+#include <iostream>
+using namespace std;
+
+// Fast modular exponentiation: (base^exp) % mod
+long long mod_exp(long long base, long long exp, long long mod) {
+    long long res = 1;
+    base %= mod;
+    while (exp > 0) {
+        if (exp & 1) res = (res * base) % mod;
+        base = (base * base) % mod;
+        exp >>= 1;
+    }
+    return res;
+}
+
+// Compute shared secret: otherPublic^private mod p
+long long shared_secret(long long otherPub, long long priv, long long p) {
+    return mod_exp(otherPub, priv, p);
+}
+
+int main() {
+    // Prime (p) and generator (g)
+    const long long p = 23;
+    const long long g = 5;
+
+    // Private keys
+    const long long r  = 6;  // Rohan
+    const long long ra = 15; // Raj
+    const long long pr = 7;  // Pratham (attacker)
+
+    // Public keys: g^private mod p
+    const long long R   = mod_exp(g, r, p);  // Rohan's public
+    const long long RA  = mod_exp(g, ra, p); // Raj's public
+    const long long PR  = mod_exp(g, pr, p); // Pratham's public (used for MITM)
+
+    cout << "Choose an option:\n1. Normal DH exchange\n2. MITM by Pratham\n> ";
+    int choice; cin >> choice;
+
+    if (choice == 1) {
+        // Normal exchange: Rohan <-> Raj
+        cout << "Rohan's Public : " << R  << "\n";
+        cout << "Raj's Public   : " << RA << "\n";
+
+        long long S_rohan = shared_secret(RA, r, p);
+        long long S_raj   = shared_secret(R,  ra, p);
+
+        cout << "Rohan's secret: " << S_rohan << "\n";
+        cout << "Raj's secret  : " << S_raj   << "\n";
+
+        cout << (S_rohan == S_raj ? "Secure communication established.\n"
+                                : "Shared secrets do not match!\n");
+    }
+    else if (choice == 2) {
+        // MITM scenario: Pratham intercepts and substitutes public keys
+        cout << "Rohan's Public : " << R  << "\n";
+        cout << "Raj's Public   : " << RA << "\n";
+
+        // Attacker sends PR to both parties
+        cout << "Pratham sends his public key to Rohan: " << PR << "\n";
+        cout << "Pratham sends his public key to Raj  : " << PR << "\n";
+
+        // Each party computes a secret (actually with Pratham)
+        long long S_rohan = shared_secret(PR, r, p);  // Rohan <> Pratham
+        long long S_raj   = shared_secret(PR, ra, p); // Raj   <> Pratham
+
+        // Pratham computes both shared secrets using intercepted publics
+        long long S_pr_rohan = shared_secret(R,  pr, p);  // with Rohan
+        long long S_pr_raj   = shared_secret(RA, pr, p);  // with Raj
+
+        cout << "Rohan computes secret (with Pratham): " << S_rohan << "\n";
+        cout << "Raj   computes secret (with Pratham): " << S_raj   << "\n";
+        cout << "Pratham's secret with Rohan         : " << S_pr_rohan << "\n";
+        cout << "Pratham's secret with Raj           : " << S_pr_raj   << "\n";
+
+        cout << ((S_rohan == S_pr_rohan && S_raj == S_pr_raj)
+                 ? "MITM successful: Pratham can intercept/modify messages.\n"
+                 : "MITM failed.\n");
+    }
+    else {
+        cout << "Invalid option.\n";
+    }
+    return 0;
+}
