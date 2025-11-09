@@ -186,7 +186,7 @@
         saveDB(db);
         refreshDBView();
 
-        regMsg.textContent = "Registered successfully ✅ (salt + hash stored)";
+        regMsg.textContent = "Registered successfully (salt + hash stored)";
         regUser.value = "";
         regPass.value = "";
         strengthMsg.textContent = "";
@@ -232,7 +232,7 @@
         const derivedB64 = toBase64(derived);
 
         if (derivedB64 === record.hash) {
-          loginMsg.textContent = "Login successful ✅";
+          loginMsg.textContent = "Login successful";
           lockState[user] = { fails: 0, lockedUntil: 0 };
         } else {
           state.fails++;
