@@ -1,0 +1,87 @@
+import random
+import time
+import math
+
+def is_prime(n):
+    if n <= 1:
+        return False
+    for i in range(2, int(math.sqrt(n)) + 1):
+        if n % i == 0:
+            return False
+    return True
+
+def gcd(a, b):
+    while b:
+        a, b = b, a % b
+    return a
+
+def extended_gcd(a, b):
+    if a == 0:
+        return b, 0, 1
+    g, x1, y1 = extended_gcd(b % a, a)
+    x = y1 - (b // a) * x1
+    y = x1
+    return g, x, y
+
+def mod_inverse(e, phi):
+    g, x, _ = extended_gcd(e, phi)
+    if g != 1:
+        raise ValueError("Inverse doesn't exist")
+    return x % phi
+
+def find_coprime(phi):
+    while True:
+        e = random.randint(2, phi - 1)
+        if gcd(e, phi) == 1:
+            return e
+
+
+
+print("=== RSA Secure Communication Simulation ===\n")
+
+# Step 1: Key Generation
+p = int(input("Enter first prime number (p): "))
+q = int(input("Enter second prime number (q): "))
+
+if not (is_prime(p) and is_prime(q)):
+    print("gBoth p and q must be prime!")
+else:
+    n = p * q
+    phi = (p - 1) * (q - 1)
+    e = find_coprime(phi)
+    d = mod_inverse(e, phi)
+
+    print(f"\n Public Key: (e={e}, n={n})")
+    print(f" Private Key: (d={d}, n={n})\n")
+
+    # Step 2: Encryption
+    while True:
+        try:
+            plaintext = int(input("Enter integer plaintext to encrypt: "))
+            if plaintext <= 0 or plaintext >= n:
+                raise ValueError("Plaintext must be between 1 and n-1.")
+            break
+        except ValueError as ve:
+            print(f"Invalid input: {ve}. Try again.")
+
+    start_enc = time.perf_counter()
+    cipher_text = pow(plaintext, e, n)
+    enc_time = time.perf_counter() - start_enc
+
+    print(f"\nCiphertext → {cipher_text}")
+    print(f"Encryption Time → {enc_time:.6f} seconds")
+
+    # Step 3: Decryption
+    start_dec = time.perf_counter()
+    decrypted_text = pow(cipher_text, d, n)
+    dec_time = time.perf_counter() - start_dec
+
+    print(f"\nCiphertext received → {cipher_text}")
+    print(f"Decrypted Text → {decrypted_text}")
+    print(f"Decryption Time → {dec_time:.6f} seconds")
+
+    # Step 4: Verification
+    if decrypted_text == plaintext:
+        print("\nMessage Integrity Verified: The message is not altered.")
+    else:
+        print("\nMessage Integrity Failed: The message was altered!")
