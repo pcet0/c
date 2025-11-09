@@ -1,0 +1,55 @@
+#include <iostream>
+#include <string>
+#include <cctype>
+using namespace std;
+
+string encrypt(string text, string key)
+{
+    string result = "";
+
+    for (int i = 0; i < text.length(); i++)
+    {
+        char ch = text[i];
+        if (isalpha(ch))
+        {
+            int index = toupper(ch) - 'A';
+            char enc = key[index];
+
+            if (isupper(ch))
+                result += enc;
+            else
+                result += tolower(enc);
+        }
+        else
+        {
+            result += ch;
+        }
+    }
+    return result;
+}
+
+int main()
+{
+    string text, key;
+
+    cout << "Monoalphabetic Cipher\n";
+
+    cout << "Enter the plain text: ";
+    getline(cin, text);
+
+    cout << "Enter the 26-letter substitution key (A-Z): ";
+    getline(cin, key);
+
+    if (key.length() != 26)
+    {
+        cout << "Error: Key must contain exactly 26 letters!" << endl;
+        return 0;
+    }
+
+    string encrypted = encrypt(text, key);
+
+    cout << "\nPlain Text: " << text << endl;
+    cout << "Encrypted Text: " << encrypted << endl;
+
+    return 0;
+}

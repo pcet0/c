@@ -1,0 +1,39 @@
+#include <iostream>
+#include <string>
+using namespace std;
+
+string vernamEncrypt(string text, string key)
+{
+    if (text.length() != key.length())
+    {
+        cout << "Error: Key must be the same length as text!" << endl;
+        return "";
+    }
+
+    string encrypted = "";
+    for (int i = 0; i < text.length(); i++)
+        encrypted += text[i] ^ key[i];
+
+    return encrypted;
+}
+
+int main()
+{
+    string text, key;
+
+    cout << "----- Vernam Cipher -----\n";
+    cout << "Enter plain text: ";
+    getline(cin, text);
+
+    cout << "Enter key (same length as text): ";
+    getline(cin, key);
+
+    string encrypted = vernamEncrypt(text, key);
+
+    cout << "\nEncrypted Text (ASCII values): ";
+    for (char c : encrypted)
+        cout << int(c) << " ";
+
+    cout << endl;
+    return 0;
+}

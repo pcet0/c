@@ -1,0 +1,44 @@
+#include <bits/stdc++.h> 
+using namespace std;
+
+string caesarEncrypt(const string &text, int key)
+{
+    string res = "";
+    key = (key % 26 + 26) % 26;
+    for (int i = 0; i < text.size(); i++)
+    {
+        char c = text[i];
+        if (isupper(c))
+            res += char((c - 'A' + key) % 26 + 'A');
+        else if (islower(c))
+            res += char((c - 'a' + key) % 26 + 'a');
+        else
+            res += c;
+    }
+    return res;
+}
+
+string caesarDecrypt(const string &text, int key)
+{
+    key = (key % 26 + 26) % 26;
+    return caesarEncrypt(text, (26 - key) % 26);
+}
+
+int main()
+{
+    string text;
+    int key;
+
+    cout << "Caesar Cipher\n";
+    cout << "Enter text: ";
+    getline(cin, text);
+    cout << "Enter shift key (integer): ";
+    cin >> key;
+
+    string enc = caesarEncrypt(text, key);
+    string dec = caesarDecrypt(enc, key);
+
+    cout << "Encrypted: " << enc << "\n";
+    cout << "Decrypted: " << dec << "\n";
+    return 0;
+}

@@ -1,0 +1,39 @@
+#include <iostream>
+#include <string>
+#include <cstdlib>
+#include <ctime>
+using namespace std;
+
+string otpEncrypt(string text, string key)
+{
+    string encrypted = "";
+    for (int i = 0; i < text.length(); i++)
+        encrypted += text[i] ^ key[i];
+    return encrypted;
+}
+
+int main()
+{
+    string text;
+    cout << "----- One-Time Pad (OTP) -----\n";
+    cout << "Enter plain text: ";
+    getline(cin, text);
+
+    srand(time(0));
+    string key = "";
+    for (int i = 0; i < text.length(); i++)
+        key += char(rand() % 256);
+
+    string encrypted = otpEncrypt(text, key);
+
+    cout << "\nGenerated Random Key (ASCII values): ";
+    for (char c : key)
+        cout << (int)c << " ";
+
+    cout << "\nEncrypted Text (ASCII values): ";
+    for (char c : encrypted)
+        cout << (int)c << " ";
+
+    cout << endl;
+    return 0;
+}
