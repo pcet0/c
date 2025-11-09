@@ -1,0 +1,76 @@
+def mod_exp(base, exp, mod):
+    return pow(base, exp, mod)
+
+def main():
+    # Public parameters (example)
+    p = 23  # prime
+    g = 5   # generator
+
+    # Private keys (Rohan, Raj, Pratham(MITM))
+    r = 6   # Rohan's private key
+    ra = 15 # Raj's private key
+    pr = 7  # Pratham's private key (MITM)
+
+    # Public keys computed from private keys
+    R = mod_exp(g, r, p)     # Rohan's public key
+    RA = mod_exp(g, ra, p)   # Raj's public key
+    PR = mod_exp(g, pr, p)   # Pratham's public key (same value sent to both)
+
+    print("Choose an option:")
+    print("1. Exchange Public Keys between Rohan and Raj (normal)")
+    print("2. Perform Man-In-The-Middle Attack by Pratham")
+    choice = input("Enter 1 or 2: ").strip()
+
+    if choice == "1":
+        # Normal exchange
+        print("\n--- Normal Diffie-Hellman Exchange ---")
+        print(f"Rohan's Public Key: {R}")
+        print(f"Raj's Public Key  : {RA}")
+
+        # Each computes shared secret
+        S_Rohan = mod_exp(RA, r, p)
+        S_Raj = mod_exp(R, ra, p)
+
+        print(f"Rohan computes shared secret: {S_Rohan}")
+        print(f"Raj computes shared secret  : {S_Raj}")
+
+        if S_Rohan == S_Raj:
+            print("Result: Secure communication established.\n")
+        else:
+            print("Result: Shared secrets do not match!\n")
+
+    elif choice == "2":
+        # MITM attack
+        print("\n--- Man-In-The-Middle (MITM) by Pratham ---")
+        print(f"Rohan's Public Key: {R}")
+        print(f"Raj's Public Key  : {RA}")
+
+        # Pratham intercepts and replaces public keys with his own
+        print(f"Pratham intercepts and sends to Rohan: {PR}")
+        print(f"Pratham intercepts and sends to Raj  : {PR}")
+
+        # Rohan computes shared secret thinking he's with Raj (but with Pratham's key)
+        S_Rohan = mod_exp(PR, r, p)
+        print(f"Rohan computes shared secret with (what he thinks is Raj): {S_Rohan}")
+
+        # Raj computes shared secret thinking he's with Rohan (but with Pratham's key)
+        S_Raj = mod_exp(PR, ra, p)
+        print(f"Raj computes shared secret with (what he thinks is Rohan): {S_Raj}")
+
+        # Pratham actually knows both secrets:
+        S_PrathamRohan = mod_exp(R, pr, p)   # using Rohan's public key and Pratham's private
+        S_PrathamRaj = mod_exp(RA, pr, p)    # using Raj's public key and Pratham's private
+        print(f"Pratham computes shared secret with Rohan: {S_PrathamRohan}")
+        print(f"Pratham computes shared secret with Raj  : {S_PrathamRaj}")
+
+        if S_Rohan == S_PrathamRohan and S_Raj == S_PrathamRaj:
+            print("\nResult: Man-In-The-Middle attack successful. Pratham can intercept/modify messages.\n")
+        else:
+            print("\nResult: MITM attack failed!\n")
+
+    else:
+        print("\nInvalid option! Please run again and enter 1 or 2.\n")
+
+
+if __name__ == "__main__":
+    main()
