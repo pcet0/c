@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Secure Password System</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 30px;
+      }
+      input {
+        margin: 5px 0;
+        padding: 5px;
+      }
+      hr {
+        margin: 25px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Register</h2>
+    <label>Username:</label><br />
+    <input id="regUser" type="text" /><br />
+
+    <label>Password:</label><br />
+    <input id="regPass" type="password" /><br />
+    <span id="strengthMsg"></span><br />
+
+    <label>Iterations:</label><br />
+    <input id="iter" type="number" value="100000" /><br />
+
+    <button id="btnRegister">Register</button>
+    <div id="regMsg"></div>
+
+    <hr />
+
+    <h2>Login</h2>
+    <label>Username:</label><br />
+    <input id="loginUser" type="text" /><br />
+    <label>Password:</label><br />
+    <input id="loginPass" type="password" /><br />
+    <button id="btnLogin">Login</button>
+    <div id="loginMsg"></div>
+
+    <hr />
+
+    <h2>Stored (Simulated Server DB)</h2>
+    <pre id="dbView">{}</pre>
+    <button id="btnClear">Clear Storage</button>
+
+    <script>
+      // --- Helper setup ---
+      const enc = new TextEncoder();
+      const dec = new TextDecoder();
+
+      function toBase64(buffer) {
+        return btoa(String.fromCharCode(...new Uint8Array(buffer)));
+      }
+      function fromBase64(base64) {
+        return Uint8Array.from(atob(base64), (c) => c.charCodeAt(0)).buffer;
+      }
+      function genSalt(len = 16) {
+        return crypto.getRandomValues(new Uint8Array(len)).buffer;
+      }
+
+      // --- PBKDF2 Hash Derivation ---
+      async function derivePBKDF2(
+        password,
+        saltBuffer,
+        iterations = 100000,
+        keyLen = 32
+      ) {
+        const baseKey = await crypto.subtle.importKey(
+          "raw",
+          enc.encode(password),
+          { name: "PBKDF2" },
+          false,
+          ["deriveBits"]
+        );
+        const derived = await crypto.subtle.deriveBits(
+          {
+            name: "PBKDF2",
+            salt: saltBuffer,
+            iterations: iterations,
+            hash: "SHA-256",
+          },
+          baseKey,
+          keyLen * 8
+        );
+        return derived;
+      }
+
+      // --- Simulated localStorage DB ---
+      const DB_KEY = "demo_pw_db_v2";
+      function loadDB() {
+        try {
+          return JSON.parse(localStorage.getItem(DB_KEY) || "{}");
+        } catch {
+          return {};
+        }
+      }
+      function saveDB(db) {
+        localStorage.setItem(DB_KEY, JSON.stringify(db));
+      }
+      function refreshDBView() {
+        document.getElementById("dbView").textContent = JSON.stringify(
+          loadDB(),
+          null,
+          2
+        );
+      }
+
+      // --- UI References ---
+      const regUser = document.getElementById("regUser");
+      const regPass = document.getElementById("regPass");
+      const iterInp = document.getElementById("iter");
+      const btnRegister = document.getElementById("btnRegister");
+      const regMsg = document.getElementById("regMsg");
+      const strengthMsg = document.getElementById("strengthMsg");
+
+      const loginUser = document.getElementById("loginUser");
+      const loginPass = document.getElementById("loginPass");
+      const btnLogin = document.getElementById("btnLogin");
+      const loginMsg = document.getElementById("loginMsg");
+
+      const btnClear = document.getElementById("btnClear");
+
+      // --- Lockout System ---
+      let lockState = {}; // username -> {fails, lockedUntil}
+
+      // --- Password Strength Checker ---
+      regPass.addEventListener("input", () => {
+        const pass = regPass.value;
+        let strength = 0;
+
+        if (pass.length >= 8) strength++;
+        if (/[A-Z]/.test(pass)) strength++;
+        if (/[a-z]/.test(pass)) strength++;
+        if (/[0-9]/.test(pass)) strength++;
+        if (/[^A-Za-z0-9]/.test(pass)) strength++;
+
+        if (strength <= 2) {
+          strengthMsg.textContent = "Weak password";
+          strengthMsg.style.color = "red";
+        } else if (strength === 3 || strength === 4) {
+          strengthMsg.textContent = "Medium strength";
+          strengthMsg.style.color = "orange";
+        } else {
+          strengthMsg.textContent = "Strong password";
+          strengthMsg.style.color = "green";
+        }
+      });
+
+      // --- Registration Logic ---
+      btnRegister.addEventListener("click", async () => {
+        regMsg.textContent = "";
+        const user = regUser.value.trim();
+        const pass = regPass.value.trim();
+        const iterations = Math.max(1000, Number(iterInp.value) || 100000);
+
+        if (!user || !pass) {
+          regMsg.textContent = "Enter username and password.";
+          return;
+        }
+
+        if (strengthMsg.textContent.includes("Weak")) {
+          regMsg.textContent = "Please choose a stronger password!";
+          return;
+        }
+
+        const db = loadDB();
+        if (db[user]) {
+          regMsg.textContent = "User already exists.";
+          return;
+        }
+
+        const salt = genSalt(16);
+        const derived = await derivePBKDF2(pass, salt, iterations, 32);
+
+        db[user] = {
+          salt: toBase64(salt),
+          hash: toBase64(derived),
+          iterations,
+          created: new Date().toISOString(),
+        };
+        saveDB(db);
+        refreshDBView();
+
+        regMsg.textContent = "Registered successfully ✅ (salt + hash stored)";
+        regUser.value = "";
+        regPass.value = "";
+        strengthMsg.textContent = "";
+      });
+
+      // --- Login Logic ---
+      btnLogin.addEventListener("click", async () => {
+        loginMsg.textContent = "";
+        const user = loginUser.value.trim();
+        const pass = loginPass.value.trim();
+
+        if (!user || !pass) {
+          loginMsg.textContent = "Enter username and password.";
+          return;
+        }
+
+        const now = Date.now();
+        const state = lockState[user] || { fails: 0, lockedUntil: 0 };
+        if (state.lockedUntil && now < state.lockedUntil) {
+          loginMsg.textContent = `Account locked. Try again after ${new Date(
+            state.lockedUntil
+          ).toLocaleTimeString()}.`;
+          return;
+        }
+
+        const db = loadDB();
+        const record = db[user];
+        if (!record) {
+          loginMsg.textContent = "Invalid credentials.";
+          state.fails++;
+          lockState[user] = state;
+          checkLock(user);
+          return;
+        }
+
+        const saltBuf = fromBase64(record.salt);
+        const derived = await derivePBKDF2(
+          pass,
+          saltBuf,
+          record.iterations,
+          32
+        );
+        const derivedB64 = toBase64(derived);
+
+        if (derivedB64 === record.hash) {
+          loginMsg.textContent = "Login successful ✅";
+          lockState[user] = { fails: 0, lockedUntil: 0 };
+        } else {
+          state.fails++;
+          lockState[user] = state;
+          checkLock(user);
+          loginMsg.textContent = "Invalid credentials.";
+        }
+      });
+
+      // --- Lockout Logic ---
+      function checkLock(user) {
+        const s = lockState[user];
+        if (!s) return;
+        if (s.fails >= 3 && s.fails < 6) {
+          s.lockedUntil = Date.now() + 30_000; // 30 sec
+        } else if (s.fails >= 6) {
+          s.lockedUntil = Date.now() + 5 * 60_000; // 5 min
+        }
+        lockState[user] = s;
+      }
+
+      // --- Clear Storage ---
+      btnClear.addEventListener("click", () => {
+        if (!confirm("Clear all stored users?")) return;
+        localStorage.removeItem(DB_KEY);
+        lockState = {};
+        refreshDBView();
+        regMsg.textContent = "";
+        loginMsg.textContent = "";
+      });
+
+      // --- Initialize ---
+      refreshDBView();
+    </script>
+  </body>
+</html>
