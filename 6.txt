@@ -1,81 +1,86 @@
 import random
 import hashlib
+import math
 
+# Check if number is prime (using built-in math.isqrt)
 def is_prime(num):
     if num <= 1:
         return False
-    for i in range(2, int(num ** 0.5) + 1):
+    for i in range(2, math.isqrt(num) + 1):
         if num % i == 0:
             return False
     return True
 
-def gcd(a, b):
-    while b != 0:
-        a, b = b, a % b
-    return a
-
-def mod_inverse(a, m):
-    for i in range(1, m):
-        if (a * i) % m == 1:
-            return i
-    return None
-
+# Generate RSA key pair (public and private)
 def generate_keypair():
     p = q = 1
     while not is_prime(p):
         p = random.randint(100, 1000)
     while not is_prime(q) or p == q:
         q = random.randint(100, 1000)
+
     n = p * q
     phi = (p - 1) * (q - 1)
+
+    # Choose e using gcd from math
     e = random.randint(2, phi - 1)
-    while gcd(e, phi) != 1:
+    while math.gcd(e, phi) != 1:
         e = random.randint(2, phi - 1)
-    d = mod_inverse(e, phi)
+
+    # Use built-in modular inverse
+    d = pow(e, -1, phi)
+
     return (e, n), (d, n)
 
+# Encrypt message
 def rsa_encrypt(message, public_key):
     e, n = public_key
-    return [pow(ord(char), e, n) for char in message]
+    return [pow(ord(c), e, n) for c in message]
 
-def rsa_decrypt(encrypted_message, private_key):
+# Decrypt message
+def rsa_decrypt(encrypted, private_key):
     d, n = private_key
-    return ''.join([chr(pow(char, d, n)) for char in encrypted_message])
+    return ''.join(chr(pow(c, d, n)) for c in encrypted)
 
+# Generate digital signature (hash + encrypt)
 def generate_signature(message, private_key):
-    hashed_message = hashlib.sha256(message.encode()).hexdigest()
-    return rsa_encrypt(hashed_message, private_key)
+    hashed = hashlib.sha256(message.encode()).hexdigest()
+    return rsa_encrypt(hashed, private_key)
 
+# Verify digital signature (decrypt + compare)
 def verify_signature(message, signature, public_key):
-    hashed_message = hashlib.sha256(message.encode()).hexdigest()
-    decrypted_signature = rsa_decrypt(signature, public_key)
-    return decrypted_signature == hashed_message
+    hashed = hashlib.sha256(message.encode()).hexdigest()
+    decrypted = rsa_decrypt(signature, public_key)
+    return decrypted == hashed
 
-print("Generating keys for X (sender) and Y (receiver)...")
-public_key_X, private_key_X = generate_keypair()
-public_key_Y, private_key_Y = generate_keypair()
+# ---- Main Program ----
+print("Generating keys for X (Sender) and Y (Receiver)...")
+public_X, private_X = generate_keypair()
+public_Y, private_Y = generate_keypair()
 
 message = input("\nEnter message from X → Y: ")
 
-encrypted_message = rsa_encrypt(message, public_key_Y)
-signature = generate_signature(message, private_key_X)
+encrypted = rsa_encrypt(message, public_Y)
+signature = generate_signature(message, private_X)
 
-print("\nEncrypted Message:", encrypted_message)
+print("\nEncrypted Message:", encrypted)
 print("Signature:", signature)
 
+# Simulated attacker
 try:
-    pr_x = "test"
-    de = rsa_decrypt(encrypted_message, pr_x)
-    print("Z trying to read message:", de)
+    fake_key = "invalid"
+    decrypted = rsa_decrypt(encrypted, fake_key)
+    print("Z (attacker) read message:", decrypted)
 except:
-    print("Z (attacker) failed to decrypt message — not authorized.")
+    print("\nZ (attacker) failed to decrypt message — not authorized.")
 
-decrypted_message = rsa_decrypt(encrypted_message, private_key_Y)
-is_valid = verify_signature(decrypted_message, signature, public_key_X)
+# Receiver side
+decrypted_msg = rsa_decrypt(encrypted, private_Y)
+verified = verify_signature(decrypted_msg, signature, public_X)
 
 print("\nReceiver Side:")
-print("Decrypted Message:", decrypted_message)
-if is_valid:
+print("Decrypted Message:", decrypted_msg)
+if verified:
     print("Signature Verified — Message Integrity and Authenticity Confirmed.")
 else:
     print("Signature Invalid — Message may have been tampered.")
