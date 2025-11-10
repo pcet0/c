@@ -341,7 +341,7 @@ int main()
         cout << "----- Vernam Cipher -----\n";
         cout << "Enter plain text: ";
         getline(cin, text);
-        cout << "Enter key (same length as text): ";
+        cout << "Enter key: ";
         getline(cin, key);
 
         string encrypted = vernamEncrypt(text, key);
