@@ -200,24 +200,25 @@ string vigenereDecrypt(const string &text, const string &key)
     return res;
 }
 
-// [6] Vernam
+// [6] Vernam 
 string vernamEncrypt(string text, string key)
 {
-    if (text.length() != key.length())
+    if (key.empty())
     {
-        cout << "Error: Key must be the same length as text!" << endl;
+        cout << "Error: Key cannot be empty!" << endl;
         return "";
     }
 
     string encrypted = "";
     for (int i = 0; i < (int)text.length(); i++)
-        encrypted += text[i] ^ key[i];
+        encrypted += text[i] ^ key[i % key.length()];
 
     return encrypted;
 }
+
 string vernamDecrypt(string cipher, string key)
 {
-    // XOR again with the same key
+    // XOR again with same repeating key
     return vernamEncrypt(cipher, key);
 }
 
