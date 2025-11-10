@@ -233,9 +233,8 @@ int main()
     cout << "5. Vigenere\n";
     cout << "6. Vernam\n";
     cout << "Enter choice: ";
-    if (!(cin >> choice))
-        return 0;
-    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    cin >> choice;
+    cin.ignore();
 
     switch (choice)
     {
@@ -282,27 +281,24 @@ int main()
     case 3:
     {
         string text;
-        cout << "----- One-Time Pad (OTP) -----\n";
-        cout << "Enter plain text: ";
+        cout << "----- One-Time Pad (OTP) -----\nEnter plain text: ";
         getline(cin, text);
 
-        srand((unsigned)time(0));
-        string key = "";
-        for (int i = 0; i < (int)text.length(); i++)
+        srand(time(0));
+        string key;
+        for (char c : text)
             key += char(rand() % 256);
-
+        
         string encrypted = otpEncrypt(text, key);
         string decrypted = otpDecrypt(encrypted, key);
-
-        cout << "\nGenerated Random Key (ASCII values): ";
-        for (char c : key)
-            cout << (int)(unsigned char)c << " ";
-
-        cout << "\nEncrypted Text (ASCII values): ";
-        for (char c : encrypted)
-            cout << (int)(unsigned char)c << " ";
-
-        cout << "\nDecrypted Text: " << decrypted << endl;
+        
+        cout << "\nKey (ASCII): ";
+        for (char c : key) cout << (int)(unsigned char)c << " ";
+        
+        cout << "\nEncrypted (ASCII): ";
+        for (char c : encrypted) cout << (int)(unsigned char)c << " ";
+        
+        cout << "\nDecrypted: " << decrypted << "\n";
         break;
     }
     case 4:
